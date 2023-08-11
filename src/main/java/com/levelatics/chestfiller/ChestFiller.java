@@ -117,29 +117,37 @@ public class ChestFiller extends JavaPlugin implements CommandExecutor, Listener
 
     private void fillChestRandomly(Inventory chestInventory, String lootTable) {
         if(lootTablesConfig == null) {
-            // Config ist null ausgeben
-            getServer().getOnlinePlayers().forEach(player -> player.sendMessage("Config is null"));
+            this.getLogger().warning("Config is null!");
             return;
         }
-        getServer().getOnlinePlayers().forEach(player -> player.sendMessage(lootTablesConfig.getConfigurationSection("loot").getValues(true).toString()));
 
-        ConfigurationSection lootTableSection = lootTablesConfig.getConfigurationSection("loot." + lootTable);
+        // Get the list of materials from the loot table
+        List<String> materials = (List) lootTablesConfig.getConfigurationSection("loot").get(lootTable);
 
-        if (lootTableSection != null) {
-            List<String> lootItems = new ArrayList<>(lootTableSection.getKeys(false));
-            for (int slot = 0; slot < chestInventory.getSize(); slot++) {
-                if (random.nextFloat() <= 0.5) { // Adjust probability as needed
-                    String randomItemName = lootItems.get(random.nextInt(lootItems.size()));
-                    Material material = Material.getMaterial(randomItemName);
-                    if (material != null) {
-                        int amount = 1; // You can customize the amount of items
-                        ItemStack itemStack = new ItemStack(material, amount);
-                        chestInventory.setItem(slot, itemStack);
-                    }
-                } else {
-                    chestInventory.setItem(slot, new ItemStack(Material.AIR));
-                }
+        if (materials == null) {
+            this.getLogger().warning("Loot table 'loot." + lootTable + "' does not exist!");
+            return;
+        }
+
+
+        for (int slot = 0; slot < chestInventory.getSize(); slot++) {
+
+            if (random.nextFloat() > 0.5) { // Adjust probability as needed
+                chestInventory.setItem(slot, new ItemStack(Material.AIR));
+                continue;
             }
+
+
+            String randomItemName = materials.get(random.nextInt(materials.size()));
+            Material material = Material.getMaterial(randomItemName);
+            if (material == null) {
+                continue;
+            }
+
+            int amount = 1; // You can customize the amount of items
+            ItemStack itemStack = new ItemStack(material, amount);
+            chestInventory.setItem(slot, itemStack);
+
         }
     }
 }
