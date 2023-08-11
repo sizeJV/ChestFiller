@@ -1,0 +1,7 @@
+loot:
+  default:
+  - DIAMOND
+  - GOLD_INGOT
+  rare:
+  - EMERALD
+  - IRON_INGOT
