@@ -6,7 +6,6 @@ import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -27,7 +26,6 @@ public class ChestFiller extends JavaPlugin implements CommandExecutor, Listener
     private String prefix = "§8[§6§lChest Filler§8] §e"; // Prefix for messages
     private ItemStack chestFillerStick = new ItemStack(Material.STICK);
     private ItemMeta chestFillerStickMeta;
-
     private String currentLootTable = "default"; // Default loot table
 
     @Override
@@ -51,54 +49,56 @@ public class ChestFiller extends JavaPlugin implements CommandExecutor, Listener
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (sender instanceof Player) {
-            Player player = (Player) sender;
-            if (command.getName().equalsIgnoreCase("chestfill")) {
-                // Give the player the chestFillerStick
-                player.getInventory().addItem(chestFillerStick);
-                player.sendMessage(prefix + "You received the Chest Filler Stick!");
-                return true;
-            }
+        if (!(sender instanceof Player) || !command.getName().equalsIgnoreCase("chestfill")) {
+            return false;
         }
-        return false;
+
+        Player player = (Player) sender;
+        player.getInventory().addItem(chestFillerStick);
+        sendMessage(player, "You received the Chest Filler Stick!");
+        return true;
     }
 
-    // Handle right-clicking chests
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction().toString().contains("RIGHT_CLICK")) {
-            Player player = event.getPlayer();
-
-            // Check if the player is holding the chestFillerStick
-            ItemStack heldItem = player.getInventory().getItemInMainHand();
-            if (heldItem.isSimilar(chestFillerStick)) {
-                Block block = event.getClickedBlock();
-                if (block != null && block.getType() == Material.CHEST) {
-                    event.setCancelled(true); // Prevent chest interaction
-                    Chest chest = (Chest) block.getState();
-                    fillChestRandomly(chest.getInventory(), currentLootTable);
-                    player.sendMessage(prefix + "Chest has been filled randomly with items from the loot table!");
-                }
-            }
+        if (!event.getAction().toString().contains("RIGHT_CLICK")) {
+            return;
         }
+
+        Player player = event.getPlayer();
+        ItemStack heldItem = player.getInventory().getItemInMainHand();
+        if (!heldItem.isSimilar(chestFillerStick)) {
+            return;
+        }
+
+        Block block = event.getClickedBlock();
+        if (block == null || block.getType() != Material.CHEST) {
+            return;
+        }
+
+        event.setCancelled(true);
+        Chest chest = (Chest) block.getState();
+        fillChestRandomly(chest.getInventory(), currentLootTable);
+        sendMessage(player, "Chest has been filled randomly with items from the loot table!");
     }
 
-    // Handle punching with the ChestFillerStick to switch loot tables
     @EventHandler
     public void onPlayerPunch(PlayerInteractEvent event) {
-        if (event.getAction().toString().contains("LEFT_CLICK")) {
-            Player player = event.getPlayer();
-            ItemStack heldItem = player.getInventory().getItemInMainHand();
-            if (heldItem.isSimilar(chestFillerStick)) {
-                // Switch to the next loot table
-                switchLootTable();
-                player.sendMessage(prefix + "Switched to loot table:§a§l " + currentLootTable);
-                event.setCancelled(true); // Prevent block interaction
-            }
+        if (!event.getAction().toString().contains("LEFT_CLICK")) {
+            return;
         }
+
+        Player player = event.getPlayer();
+        ItemStack heldItem = player.getInventory().getItemInMainHand();
+        if (!heldItem.isSimilar(chestFillerStick)) {
+            return;
+        }
+
+        switchLootTable();
+        sendMessage(player, "Switched to loot table:§a§l " + currentLootTable);
+        event.setCancelled(true);
     }
 
-    // Prevent breaking chests while holding the ChestFillerStick
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
@@ -107,47 +107,43 @@ public class ChestFiller extends JavaPlugin implements CommandExecutor, Listener
         }
     }
 
-    private void switchLootTable() {
-        Set<String> lootTableKeys = Objects.requireNonNull(lootTablesConfig.getConfigurationSection("loot")).getKeys(false);
-        List<String> lootTableList = new ArrayList<>(lootTableKeys);
-        int currentIndex = lootTableList.indexOf(currentLootTable);
-        int nextIndex = (currentIndex + 1) % lootTableList.size();
-        currentLootTable = lootTableList.get(nextIndex);
+    private void sendMessage(Player player, String message) {
+        player.sendMessage(prefix + message);
     }
 
     private void fillChestRandomly(Inventory chestInventory, String lootTable) {
-        if(lootTablesConfig == null) {
-            this.getLogger().warning("Config is null!");
+        if (lootTablesConfig == null) {
+            getLogger().warning("Config is null!");
             return;
         }
 
-        // Get the list of materials from the loot table
-        List<String> materials = (List) lootTablesConfig.getConfigurationSection("loot").get(lootTable);
-
-        if (materials == null) {
-            this.getLogger().warning("Loot table 'loot." + lootTable + "' does not exist!");
+        List<String> materials = lootTablesConfig.getStringList("loot." + lootTable);
+        if (materials == null || materials.isEmpty()) {
+            getLogger().warning("Loot table 'loot." + lootTable + "' does not exist or is empty!");
             return;
         }
-
 
         for (int slot = 0; slot < chestInventory.getSize(); slot++) {
-
-            if (random.nextFloat() > 0.5) { // Adjust probability as needed
+            if (random.nextFloat() > 0.5) {
                 chestInventory.setItem(slot, new ItemStack(Material.AIR));
                 continue;
             }
 
-
             String randomItemName = materials.get(random.nextInt(materials.size()));
             Material material = Material.getMaterial(randomItemName);
-            if (material == null) {
-                continue;
+            if (material != null) {
+                int amount = 1; // You can customize the amount of items
+                ItemStack itemStack = new ItemStack(material, amount);
+                chestInventory.setItem(slot, itemStack);
             }
-
-            int amount = 1; // You can customize the amount of items
-            ItemStack itemStack = new ItemStack(material, amount);
-            chestInventory.setItem(slot, itemStack);
-
         }
+    }
+
+    private void switchLootTable() {
+        Set<String> lootTableKeys = lootTablesConfig.getConfigurationSection("loot").getKeys(false);
+        List<String> lootTableList = new ArrayList<>(lootTableKeys);
+        int currentIndex = lootTableList.indexOf(currentLootTable);
+        int nextIndex = (currentIndex + 1) % lootTableList.size();
+        currentLootTable = lootTableList.get(nextIndex);
     }
 }
