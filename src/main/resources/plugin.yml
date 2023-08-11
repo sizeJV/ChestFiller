@@ -8,3 +8,6 @@ commands:
   chestfill:
     description: Receive the Chest Filler Stick
     usage: /chestfill
+  reloadchestfiller:
+    description: Reloads the Chest Filler config.yml
+    usage: /reloadchestfiller

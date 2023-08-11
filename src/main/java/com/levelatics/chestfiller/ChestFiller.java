@@ -17,7 +17,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 
 public class ChestFiller extends JavaPlugin implements CommandExecutor, Listener {
 
@@ -32,6 +35,7 @@ public class ChestFiller extends JavaPlugin implements CommandExecutor, Listener
     public void onEnable() {
         getLogger().info("ChestFiller has been enabled!");
         getCommand("chestfill").setExecutor(this);
+        getCommand("reloadchestfiller").setExecutor(this);
         getServer().getPluginManager().registerEvents(this, this); // Register the listener
         saveDefaultConfig();
         lootTablesConfig = getConfig();
@@ -49,6 +53,17 @@ public class ChestFiller extends JavaPlugin implements CommandExecutor, Listener
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (command.getName().equalsIgnoreCase("reloadchestfiller")) {
+            if (!sender.hasPermission("chestfiller.reload")) {
+                sender.sendMessage(prefix + "You do not have permission to use this command.");
+                return true;
+            }
+
+            reloadConfig();
+            lootTablesConfig = getConfig();
+            sender.sendMessage(prefix + "Config has been reloaded.");
+            return true;
+        }
         if (!(sender instanceof Player) || !command.getName().equalsIgnoreCase("chestfill")) {
             return false;
         }
