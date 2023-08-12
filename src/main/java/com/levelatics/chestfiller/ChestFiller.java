@@ -3,6 +3,7 @@ package com.levelatics.chestfiller;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
+import org.bukkit.block.Furnace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -87,7 +88,14 @@ public class ChestFiller extends JavaPlugin implements CommandExecutor, Listener
         }
 
         Block block = event.getClickedBlock();
-        if (block == null || block.getType() != Material.CHEST) {
+        if (block != null || block.getType() == Material.FURNACE) {
+            event.setCancelled(true);
+            Furnace furnace = (Furnace) block.getState();
+            fillFurnaceWithCoal(furnace);
+            sendMessage(player, "Furnace has been filled with coal!");
+            return;
+        }
+        if (block == null || block.getType() != Material.CHEST || block.getType() != Material.BARREL) {
             return;
         }
 
@@ -96,7 +104,11 @@ public class ChestFiller extends JavaPlugin implements CommandExecutor, Listener
         fillChestRandomly(chest.getInventory(), currentLootTable);
         sendMessage(player, "Chest has been filled randomly with items from the loot table!");
     }
-
+    private void fillFurnaceWithCoal(Furnace furnace) {
+        int coalAmount = random.nextInt(25) + 8; // Random amount between 8 and 32
+        ItemStack coalStack = new ItemStack(Material.COAL, coalAmount);
+        furnace.getInventory().setFuel(coalStack);
+    }
     @EventHandler
     public void onPlayerPunch(PlayerInteractEvent event) {
         if (!event.getAction().toString().contains("LEFT_CLICK")) {

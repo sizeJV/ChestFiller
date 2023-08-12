@@ -1,7 +1,6 @@
 name: ChestFiller
 version: '${project.version}'
 main: com.levelatics.chestfiller.ChestFiller
-api-version: 1.20
 authors: [ LaurinRiess ]
 description: Fill Chests with custom Loot Tables
 commands:
